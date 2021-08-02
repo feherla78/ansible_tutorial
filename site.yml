@@ -1,22 +1,27 @@
 ---
-
+#TARGET ALL
 - hosts: all
   become: true
   tasks:
-  - name: install updates (Ubuntu)
+  - name: update repo cache (Ubuntu)
     tags: always
     apt:
-      upgrade: dist
       update_cache: yes
     when: ansible_distribution == "Ubuntu"
 
+#SSH-KEY
+  - name: add SSH-key for simone
+    tags: always
+    authorized_key:
+      user: simone
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINjRQch5lxSt4PXWY35rONT21lAb67a6pz2VyOFwvy1i ansible"
 
-
-
+#TARGET THE WEB-SERVER GROUP
 - hosts: web_servers
   become: true
   tasks:
- 
+
+#PLAY FOR INSTALLING APACHE2 AND PHP-SUPPORT 
   - name: install apache2 package and php support for ubuntu servers
     tags: apache,apache2,ubuntu
     apt:
@@ -26,6 +31,25 @@
       state: latest
     when: ansible_distribution == "Ubuntu"
 
+#PLAY FOR LINEINFILE TEST
+  - name: test for a lineinfile module
+    tags: lineinfile
+    lineinfile:
+      path: /etc/apache2/apache2.conf
+      regexp: '^Timeout 300'
+      line: Timeout 900
+    when: ansible_distribution == 'Ubuntu'
+    register: apache2_conf_file
+
+#PLAY FOR RESTARING APACHE2 SERVICE
+  - name: restart the apache2 service
+    tags: apache2
+    service:
+      name: apache2
+      state: restarted
+    when: apache2_conf_file.changed
+
+#PLAY FOR COPYING FILES
   - name: copy the default_site.html contents to /var/www/html/index.html on all web_servers
     tags: apache,apache2
     copy:
@@ -34,3 +58,28 @@
       owner: root
       group: root
       mode: 0644
+
+#PLAY FOR INSTALLING UNZIP
+  - name: install unzip
+    package:
+      name: unzip
+
+#PLAY FOR INSTALLING TERRAFORM
+  - name: install terraform
+    unarchive:
+      src: https://releases.hashicorp.com/terraform/0.12.28/terraform_0.12.28_linux_amd64.zip
+      dest: /usr/local/bin
+      remote_src: yes
+      mode: 0755
+      owner: root
+      group: root
+
+#PLAY FOR RESTARTING THE APACHE2 SERVICE
+  - name: restart apache 2 service
+    tags: ap2service
+    service: 
+      name: apache2
+      state: restarted
+      enabled: yes
+    when: ansible_distribution == "Ubuntu"
+
