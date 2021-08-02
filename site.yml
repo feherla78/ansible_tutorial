@@ -15,7 +15,8 @@
 
 - hosts: web_servers
   become: true
-  tasks: 
+  tasks:
+ 
   - name: install apache2 package and php support for ubuntu servers
     tags: apache,apache2,ubuntu
     apt:
@@ -25,3 +26,11 @@
       state: latest
     when: ansible_distribution == "Ubuntu"
 
+  - name: copy the default_site.html contents to /var/www/html/index.html on all web_servers
+    tags: apache,apache2
+    copy:
+      src: default_site.html
+      dest: /var/www/html/index.html
+      owner: root
+      group: root
+      mode: 0644
